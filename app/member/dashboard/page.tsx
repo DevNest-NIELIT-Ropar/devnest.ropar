@@ -174,8 +174,20 @@ export default function MemberDashboardPage() {
     const q = query(collection(db, 'memberProfiles'));
     const unsub = onSnapshot(q, (snap) => {
       const allMembers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      allMembers.sort((a: any, b: any) => (b.currentMonthPoints ?? 0) - (a.currentMonthPoints ?? 0));
-      setLeaderboard(allMembers);
+      // Mirror the leaderboard page exactly:
+      // 1. Only approved members count toward ranking
+      // 2. Same 3-level tie-break: currentMonthPoints → totalPoints → name
+      const approved = allMembers.filter((m: any) => m.status === 'approved');
+      approved.sort((a: any, b: any) => {
+        const pointsA = Number(a.currentMonthPoints) || 0;
+        const pointsB = Number(b.currentMonthPoints) || 0;
+        if (pointsB !== pointsA) return pointsB - pointsA;
+        const totalA = Number(a.totalPoints) || 0;
+        const totalB = Number(b.totalPoints) || 0;
+        if (totalB !== totalA) return totalB - totalA;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+      setLeaderboard(approved);
     }, (err) => console.warn('Leaderboard snapshot error:', err));
     return () => unsub();
   }, [profile]);
