@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { FaGithub, FaLinkedin, FaInstagram, FaDiscord, FaEnvelope, FaChevronDown, FaPaperPlane } from 'react-icons/fa';
+import { FaGithub, FaLinkedin, FaInstagram, FaDiscord, FaEnvelope, FaChevronDown, FaPaperPlane, FaWhatsapp } from 'react-icons/fa';
 import { faqData } from '@/lib/data';
 import { addContact } from '@/lib/services';
 
@@ -102,11 +102,12 @@ export default function ContactPage() {
           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '24px', border: '1px solid var(--border)', marginBottom: '2rem' }}>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>Connect with us on social platforms</p>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <a href="https://github.com" target="_blank" rel="noreferrer" className="contact-social-link"><FaGithub /></a>
-              <a href="https://linkedin.com" target="_blank" rel="noreferrer" className="contact-social-link"><FaLinkedin /></a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="contact-social-link"><FaInstagram /></a>
-              <a href="https://discord.com" target="_blank" rel="noreferrer" className="contact-social-link"><FaDiscord /></a>
-              <a href="mailto:hello@devnest.tech" className="contact-social-link"><FaEnvelope /></a>
+              <a href="https://github.com/DevNest-NIELIT-Ropar" target="_blank" rel="noreferrer" className="contact-social-link"><FaGithub /></a>
+              <a href="https://www.linkedin.com/company/devnest-ropar" target="_blank" rel="noreferrer" className="contact-social-link"><FaLinkedin /></a>
+              <a href="https://www.instagram.com/devnest_nielitropar" target="_blank" rel="noreferrer" className="contact-social-link"><FaInstagram /></a>
+              {/* <a href="https://discord.com" target="_blank" rel="noreferrer" className="contact-social-link"><FaDiscord /></a> */}
+              <a target='_blank' href="https://chat.whatsapp.com/ExpQEovO5YUEt2KKdBXOu9" style={{ color: 'var(--text-muted)', fontSize: '1.5rem', transition: 'color 0.2s' }}><FaWhatsapp /></a>
+              <a href="mailto:devnest.ropar@nielit.ac.in" className="contact-social-link"><FaEnvelope /></a>
             </div>
           </div>
 
@@ -120,14 +121,14 @@ export default function ContactPage() {
             </p>
           </div>
           <div style={{ height: '280px', borderRadius: '20px', overflow: 'hidden', border: '1px solid var(--border)' }}>
-            <iframe 
-            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3421.2011354506326!2d76.48466827562017!3d30.9648687744731!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390554e38f06ea2f%3A0x75c175701d758d5d!2sNIELIT%20Ropar%20Campus!5e0!3m2!1sen!2sin!4v1790021681541!5m2!1sen!2sin"
-            width="100%" 
-            height="100%" 
-            style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) contrast(100%)' }}
-            allowFullScreen={false} 
-            loading="lazy" 
-            referrerPolicy="strict-origin-when-cross-origin"
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3421.2011354506326!2d76.48466827562017!3d30.9648687744731!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390554e38f06ea2f%3A0x75c175701d758d5d!2sNIELIT%20Ropar%20Campus!5e0!3m2!1sen!2sin!4v1790021681541!5m2!1sen!2sin"
+              width="100%"
+              height="100%"
+              style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) contrast(100%)' }}
+              allowFullScreen={false}
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
             />
           </div>
         </motion.div>
