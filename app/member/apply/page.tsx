@@ -229,7 +229,7 @@ export default function MemberApplyPage() {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Profile Image URL</label>
+            <label className="form-label">Profile Image URL (use <Link href="https://postimages.org/" target="_blank" rel="noreferrer">postimages.org</Link> to upload image and copy the direct link)</label>
             <input
               type="url"
               className="form-input"
