@@ -116,7 +116,7 @@ export default function ContactPage() {
               📍 NIELIT Main Campus<br />
               Chhota Phull, Rupnagar (Ropar)<br />
               Punjab, 140001<br /><br />
-              📧 hello@devnest.tech<br />
+              📧 devnest.ropar@nielit.ac.in<br />
               ⏰ Mon–Sat, 10am–6pm
             </p>
           </div>
