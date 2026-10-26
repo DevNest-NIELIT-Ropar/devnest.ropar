@@ -105,8 +105,7 @@ export default function ContactPage() {
               <a href="https://github.com/DevNest-NIELIT-Ropar" target="_blank" rel="noreferrer" className="contact-social-link"><FaGithub /></a>
               <a href="https://www.linkedin.com/company/devnest-ropar" target="_blank" rel="noreferrer" className="contact-social-link"><FaLinkedin /></a>
               <a href="https://www.instagram.com/devnest_nielitropar" target="_blank" rel="noreferrer" className="contact-social-link"><FaInstagram /></a>
-              {/* <a href="https://discord.com" target="_blank" rel="noreferrer" className="contact-social-link"><FaDiscord /></a> */}
-              <a target='_blank' href="https://chat.whatsapp.com/ExpQEovO5YUEt2KKdBXOu9" style={{ color: 'var(--text-muted)', fontSize: '1.5rem', transition: 'color 0.2s' }}><FaWhatsapp /></a>
+              <a href="https://chat.whatsapp.com/ExpQEovO5YUEt2KKdBXOu9" target="_blank" rel="noreferrer" className="contact-social-link"><FaWhatsapp /></a>
               <a href="mailto:devnest.ropar@nielit.ac.in" className="contact-social-link"><FaEnvelope /></a>
             </div>
           </div>
