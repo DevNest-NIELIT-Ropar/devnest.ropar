@@ -480,9 +480,9 @@ export default function AdminDashboardPage() {
     setRegsLoading(true);
     // Reset open result draft from existing event data
     setOpenResultDraft({
-      first: eventItem.openResults?.first?.regId || '',
-      second: eventItem.openResults?.second?.regId || '',
-      third: eventItem.openResults?.third?.regId || '',
+      first: eventItem.openResults?.first?.regId || eventItem.results?.first?.regId || '',
+      second: eventItem.openResults?.second?.regId || eventItem.results?.second?.regId || '',
+      third: eventItem.openResults?.third?.regId || eventItem.results?.third?.regId || '',
     });
     try {
       const snap = await getDocs(collection(db, 'events', eventItem.id, 'registrations'));
@@ -503,7 +503,7 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Save Open mode position results to the event doc
+  // Save position results / winners to the event doc
   const handleSaveOpenResults = async () => {
     if (!selectedEventForRegs) return;
     if (!openResultDraft.first) {
@@ -514,13 +514,20 @@ export default function AdminDashboardPage() {
     const getRegName = (regId: string) => {
       const reg = eventRegs.find(r => r.id === regId);
       if (!reg) return '';
-      return reg.type === 'Team' ? reg.teamName : reg.name;
+      return reg.type === 'Team' ? (reg.teamName || reg.name) : reg.name;
     };
 
-    const buildEntry = (regId: string) => ({
-      regId,
-      name: getRegName(regId)
-    });
+    const buildEntry = (regId: string) => {
+      const reg = eventRegs.find(r => r.id === regId);
+      const score = reg && typeof reg.score === 'number' ? reg.score : (scoringScores[regId] !== undefined ? Number(scoringScores[regId]) : undefined);
+      return {
+        regId,
+        name: getRegName(regId),
+        score: typeof score === 'number' && !isNaN(score) ? score : undefined,
+        type: reg?.type || 'Solo',
+        teamLeader: reg?.type === 'Team' ? reg.teamLeader : undefined
+      };
+    };
 
     const openResults: any = { first: buildEntry(openResultDraft.first) };
     if (openResultDraft.second) openResults.second = buildEntry(openResultDraft.second);
@@ -528,12 +535,15 @@ export default function AdminDashboardPage() {
 
     setSavingOpenResults(true);
     try {
-      await updateDoc(doc(db, 'events', selectedEventForRegs.id), { openResults });
+      await updateDoc(doc(db, 'events', selectedEventForRegs.id), { 
+        openResults,
+        results: openResults 
+      });
       // Also update local selectedEventForRegs so UI refreshes
-      setSelectedEventForRegs((prev: any) => ({ ...prev, openResults }));
+      setSelectedEventForRegs((prev: any) => ({ ...prev, openResults, results: openResults }));
       toast.success('Results saved successfully!');
     } catch (err) {
-      console.error('Failed to save open results:', err);
+      console.error('Failed to save results:', err);
       toast.error('Failed to save results');
     } finally {
       setSavingOpenResults(false);
@@ -653,7 +663,28 @@ export default function AdminDashboardPage() {
         toast.success('Points saved successfully!');
       }
 
-      setEventRegs(prev => prev.map(r => r.id === regId ? { ...r, score: scoreVal } : r));
+      const updatedRegs = eventRegs.map(r => r.id === regId ? { ...r, score: scoreVal } : r);
+      setEventRegs(updatedRegs);
+
+      // Compute and persist topPerformers on the public event doc so public visitors see results immediately
+      const topScored = updatedRegs
+        .filter((r: any) => typeof r.score === 'number' && r.score > 0)
+        .sort((a: any, b: any) => b.score - a.score)
+        .slice(0, 3)
+        .map(r => ({
+          id: r.id,
+          name: r.type === 'Team' ? (r.teamName || r.name) : r.name,
+          type: r.type || 'Solo',
+          teamLeader: r.type === 'Team' ? r.teamLeader : undefined,
+          score: r.score
+        }));
+
+      if (topScored.length > 0) {
+        await updateDoc(doc(db, 'events', selectedEventForRegs.id), {
+          topPerformers: topScored
+        });
+        setSelectedEventForRegs((prev: any) => ({ ...prev, topPerformers: topScored }));
+      }
     } catch (err) {
       console.error('Score update failed:', err);
       toast.error('Failed to save score');
@@ -1792,22 +1823,26 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            {/* Open mode: Position picker for completed events */}
-            {selectedEventForRegs.status === 'completed' && selectedEventForRegs.mode === 'Open' && (
+            {/* Position picker / Set Winners for ALL completed events */}
+            {selectedEventForRegs.status === 'completed' && (
               <div style={{ background: 'rgba(250, 204, 21, 0.08)', border: '1px solid var(--warning, #facc15)', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
                   <FaMedal style={{ color: 'var(--gold)', fontSize: '1.1rem' }} />
-                  <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Set Winners (Open Event)</span>
+                  <span style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>Declare Event Winners (1st, 2nd, 3rd)</span>
                 </div>
 
-                {/* Approved registrations for position selection */}
+                {/* Approved/eligible registrations for position selection */}
                 {(() => {
-                  const approvedRegs = eventRegs.filter(r => r.status === 'approved');
-                  if (approvedRegs.length === 0) {
-                    return <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No approved registrations yet. Approve registrations first.</p>;
+                  const eligibleRegs = eventRegs.filter(r => 
+                    r.status === 'approved' || 
+                    (!r.status && selectedEventForRegs.mode === 'Intra-College') || 
+                    (selectedEventForRegs.mode === 'Intra-College' && r.status !== 'rejected')
+                  );
+                  if (eligibleRegs.length === 0) {
+                    return <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>No registrations found for this event yet.</p>;
                   }
 
-                  const getLabel = (r: any) => r.type === 'Team' ? `Team: ${r.teamName}` : r.name;
+                  const getLabel = (r: any) => r.type === 'Team' ? `Team: ${r.teamName || r.name}` : r.name;
                   const positions: Array<{ key: 'first' | 'second' | 'third'; label: string; emoji: string; required: boolean }> = [
                     { key: 'first', label: '1st Place', emoji: '🥇', required: true },
                     { key: 'second', label: '2nd Place', emoji: '🥈', required: false },
@@ -1828,13 +1863,13 @@ export default function AdminDashboardPage() {
                               onChange={(e) => setOpenResultDraft(prev => ({ ...prev, [key]: e.target.value }))}
                             >
                               <option value="">— {required ? 'Select winner' : 'None (optional)'} —</option>
-                              {approvedRegs.map(r => (
+                              {eligibleRegs.map(r => (
                                 <option key={r.id} value={r.id} disabled={
                                   (key !== 'first' && openResultDraft.first === r.id) ||
                                   (key !== 'second' && openResultDraft.second === r.id) ||
                                   (key !== 'third' && openResultDraft.third === r.id)
                                 }>
-                                  {getLabel(r)}
+                                  {getLabel(r)} {typeof r.score === 'number' ? `(${r.score} pts)` : ''}
                                 </option>
                               ))}
                             </select>
@@ -1849,11 +1884,11 @@ export default function AdminDashboardPage() {
                       >
                         {savingOpenResults ? 'Saving...' : '💾 Save Results'}
                       </button>
-                      {selectedEventForRegs.openResults?.first && (
+                      {(selectedEventForRegs.openResults?.first || selectedEventForRegs.results?.first) && (
                         <div style={{ marginTop: '10px', fontSize: '0.8rem', color: 'var(--accent)' }}>
-                          ✓ Results saved — 1st: {selectedEventForRegs.openResults.first.name}
-                          {selectedEventForRegs.openResults.second && ` · 2nd: ${selectedEventForRegs.openResults.second.name}`}
-                          {selectedEventForRegs.openResults.third && ` · 3rd: ${selectedEventForRegs.openResults.third.name}`}
+                          ✓ Results saved — 1st: {(selectedEventForRegs.openResults?.first || selectedEventForRegs.results?.first).name}
+                          {(selectedEventForRegs.openResults?.second || selectedEventForRegs.results?.second) && ` · 2nd: ${(selectedEventForRegs.openResults?.second || selectedEventForRegs.results?.second).name}`}
+                          {(selectedEventForRegs.openResults?.third || selectedEventForRegs.results?.third) && ` · 3rd: ${(selectedEventForRegs.openResults?.third || selectedEventForRegs.results?.third).name}`}
                         </div>
                       )}
                     </>

@@ -116,16 +116,27 @@ export default function EventsPage() {
     return s === filter;
   });
 
-  // Load registrations when a completed event is opened
+  // Load registrations & results when a completed event is opened
   const handleSelectEvent = async (event: any) => {
     setSelectedEvent(event);
     if (event.status === 'completed' || event.status === 'past') {
       setCompletedRegsLoading(true);
       setCompletedEventRegs([]);
       try {
-        const snap = await getDocs(collection(db, 'events', event.id, 'registrations'));
-        const regs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setCompletedEventRegs(regs);
+        const res = await fetch(`/api/events/results?eventId=${event.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.results) {
+            setSelectedEvent((prev: any) => ({ ...prev, openResults: data.results, results: data.results }));
+          }
+          if (Array.isArray(data.topPerformers) && data.topPerformers.length > 0) {
+            setCompletedEventRegs(data.topPerformers);
+          }
+        } else {
+          const snap = await getDocs(collection(db, 'events', event.id, 'registrations'));
+          const regs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setCompletedEventRegs(regs);
+        }
       } catch (err) {
         console.warn('Could not load event results:', err);
       } finally {
@@ -499,33 +510,16 @@ export default function EventsPage() {
             )}
 
             {(selectedEvent.status === 'completed' || selectedEvent.status === 'past') && (() => {
-              const isOpen = selectedEvent.mode === 'Open';
+              const results = selectedEvent.openResults || selectedEvent.results || selectedEvent.winners;
+              const hasPodium = results && results.first && results.first.name;
 
-              if (isOpen) {
-                // Open mode: show winner podium from openResults
-                const results = selectedEvent.openResults;
-                if (!results?.first) {
-                  return (
-                    <div style={{
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-muted)',
-                      padding: '16px',
-                      borderRadius: '12px',
-                      textAlign: 'center',
-                      fontWeight: 500,
-                      fontSize: '1rem'
-                    }}>
-                      🏁 Event Completed — Waiting for the result.
-                    </div>
-                  );
-                }
-
+              // 1. If podium winners were declared (1st, 2nd, 3rd), display the podium
+              if (hasPodium) {
                 const podium = [
                   { pos: '1st', emoji: '🥇', data: results.first },
                   { pos: '2nd', emoji: '🥈', data: results.second },
                   { pos: '3rd', emoji: '🥉', data: results.third },
-                ].filter(p => p.data);
+                ].filter(p => p.data && p.data.name);
 
                 return (
                   <div style={{
@@ -548,47 +542,43 @@ export default function EventsPage() {
                           padding: '12px 16px',
                         }}>
                           <span style={{ fontSize: '1.5rem', minWidth: 32 }}>{emoji}</span>
-                          <div>
+                          <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>{data.name}</div>
-                            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>{pos} Place</div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>
+                              {pos} Place {data.teamLeader && `• Leader: ${data.teamLeader}`}
+                            </div>
                           </div>
+                          {typeof data.score === 'number' && (
+                            <span style={{ fontWeight: 800, color: 'var(--accent)', fontFamily: 'var(--font-heading)', fontSize: '1rem' }}>
+                              {data.score} pts
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
                 );
-              } else {
-                // Intra-College mode: show top 3 by score
-                if (completedRegsLoading) {
-                  return (
-                    <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                      Loading results...
-                    </div>
-                  );
-                }
+              }
 
-                const scored = completedEventRegs
-                  .filter((r: any) => typeof r.score === 'number')
-                  .sort((a: any, b: any) => b.score - a.score)
-                  .slice(0, 3);
+              // 2. Otherwise, check for top performers by points
+              const scoredCandidates = (
+                Array.isArray(selectedEvent.topPerformers) && selectedEvent.topPerformers.length > 0
+                  ? selectedEvent.topPerformers
+                  : completedEventRegs
+              )
+                .filter((r: any) => typeof r.score === 'number' && r.score > 0)
+                .sort((a: any, b: any) => b.score - a.score)
+                .slice(0, 3);
 
-                if (scored.length === 0) {
-                  return (
-                    <div style={{
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border)',
-                      color: 'var(--text-muted)',
-                      padding: '16px',
-                      borderRadius: '12px',
-                      textAlign: 'center',
-                      fontWeight: 500,
-                      fontSize: '1rem'
-                    }}>
-                      🏁 Event Completed — Waiting for the result.
-                    </div>
-                  );
-                }
+              if (completedRegsLoading && scoredCandidates.length === 0) {
+                return (
+                  <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                    Loading results...
+                  </div>
+                );
+              }
 
+              if (scoredCandidates.length > 0) {
                 const medals = ['🥇', '🥈', '🥉'];
                 return (
                   <div style={{
@@ -602,8 +592,8 @@ export default function EventsPage() {
                       <span style={{ fontWeight: 800, fontSize: '1.1rem', color: 'var(--text-primary)' }}>Top Performers</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {scored.map((r: any, idx: number) => (
-                        <div key={r.id} style={{
+                      {scoredCandidates.map((r: any, idx: number) => (
+                        <div key={r.id || idx} style={{
                           display: 'flex', alignItems: 'center', gap: 14,
                           background: 'var(--bg-card)',
                           border: '1px solid var(--border)',
@@ -613,9 +603,9 @@ export default function EventsPage() {
                           <span style={{ fontSize: '1.5rem', minWidth: 32 }}>{medals[idx]}</span>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--text-primary)' }}>
-                              {r.type === 'Team' ? `Team: ${r.teamName}` : r.name}
+                              {r.type === 'Team' ? (r.name?.startsWith('Team:') ? r.name : (r.teamName ? `Team: ${r.teamName}` : r.name)) : r.name}
                             </div>
-                            {r.type === 'Team' && (
+                            {r.type === 'Team' && r.teamLeader && (
                               <div style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Leader: {r.teamLeader}</div>
                             )}
                           </div>
@@ -628,6 +618,21 @@ export default function EventsPage() {
                   </div>
                 );
               }
+
+              return (
+                <div style={{
+                  background: 'var(--bg-secondary)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-muted)',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                  fontWeight: 500,
+                  fontSize: '1rem'
+                }}>
+                  🏁 Event Completed — Waiting for the result.
+                </div>
+              );
             })()}
           </div>
         )}
