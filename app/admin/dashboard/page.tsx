@@ -519,14 +519,19 @@ export default function AdminDashboardPage() {
 
     const buildEntry = (regId: string) => {
       const reg = eventRegs.find(r => r.id === regId);
-      const score = reg && typeof reg.score === 'number' ? reg.score : (scoringScores[regId] !== undefined ? Number(scoringScores[regId]) : undefined);
-      return {
+      const score = reg && typeof reg.score === 'number' ? reg.score : (scoringScores[regId] !== undefined ? Number(scoringScores[regId]) : null);
+      const entry: any = {
         regId,
         name: getRegName(regId),
-        score: typeof score === 'number' && !isNaN(score) ? score : undefined,
         type: reg?.type || 'Solo',
-        teamLeader: reg?.type === 'Team' ? reg.teamLeader : undefined
       };
+      if (typeof score === 'number' && !isNaN(score)) {
+        entry.score = score;
+      }
+      if (reg?.type === 'Team' && reg.teamLeader) {
+        entry.teamLeader = reg.teamLeader;
+      }
+      return entry;
     };
 
     const openResults: any = { first: buildEntry(openResultDraft.first) };
@@ -671,13 +676,18 @@ export default function AdminDashboardPage() {
         .filter((r: any) => typeof r.score === 'number' && r.score > 0)
         .sort((a: any, b: any) => b.score - a.score)
         .slice(0, 3)
-        .map(r => ({
-          id: r.id,
-          name: r.type === 'Team' ? (r.teamName || r.name) : r.name,
-          type: r.type || 'Solo',
-          teamLeader: r.type === 'Team' ? r.teamLeader : undefined,
-          score: r.score
-        }));
+        .map(r => {
+          const item: any = {
+            id: r.id,
+            name: r.type === 'Team' ? (r.teamName || r.name) : r.name,
+            type: r.type || 'Solo',
+            score: r.score
+          };
+          if (r.type === 'Team' && r.teamLeader) {
+            item.teamLeader = r.teamLeader;
+          }
+          return item;
+        });
 
       if (topScored.length > 0) {
         await updateDoc(doc(db, 'events', selectedEventForRegs.id), {

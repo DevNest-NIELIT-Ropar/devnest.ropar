@@ -35,13 +35,18 @@ export async function GET(req: NextRequest) {
           .filter((r: any) => typeof r.score === 'number' && r.score > 0)
           .sort((a: any, b: any) => b.score - a.score)
           .slice(0, 3)
-          .map((r: any) => ({
-            id: r.id,
-            name: r.type === 'Team' ? `Team: ${r.teamName || r.name}` : r.name,
-            type: r.type || 'Solo',
-            teamLeader: r.type === 'Team' ? r.teamLeader : undefined,
-            score: r.score
-          }));
+          .map((r: any) => {
+            const item: any = {
+              id: r.id,
+              name: r.type === 'Team' ? `Team: ${r.teamName || r.name}` : r.name,
+              type: r.type || 'Solo',
+              score: r.score
+            };
+            if (r.type === 'Team' && r.teamLeader) {
+              item.teamLeader = r.teamLeader;
+            }
+            return item;
+          });
 
         if (scored.length > 0) {
           topPerformers = scored;
