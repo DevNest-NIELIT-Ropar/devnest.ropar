@@ -1,178 +1,103 @@
-This is the **DevNest** Next.js web app — the official platform for the NIELIT Coding Club.
-It features a public site (events, projects, blogs, leaderboard, members) plus an admin dashboard and a per-member personal dashboard.
+# 🪺 DevNest — NIELIT Coding Club
+
+Welcome to **DevNest**, the official web platform for the **NIELIT Coding Club**. 
+
+DevNest is built to foster a collaborative culture among student developers, engineers, and creators. The platform showcases club activities, technical projects, community blogs, competitive leaderboards, and member achievements.
 
 ---
 
-## 🔒 Firebase Security Rules Logic
+## ✨ Features
 
-### Admin Authentication Model
-
-> **Important**: The app uses **Firebase Custom Claims** for admin detection — not `localStorage`.
-> The client-side `localStorage.setItem('devnest_admin', 'true')` is used only for UI gating (showing admin controls in the UI).
-> The actual Firestore write permissions are enforced server-side via the `admin: true` custom claim.
-
-To set an admin custom claim for a user, run:
-```bash
-npx ts-node scripts/setAdminClaim.ts <firebase-uid>
-```
+- **📅 Events & Workshops**: Discover upcoming hackathons, tech talks, coding bootcamps, and club meetups.
+- **💻 Project Showcase**: Explore student-built software, web apps, and innovative tech solutions.
+- **✍️ Technical Blogs**: Read technical articles, tutorials, and development stories written by community members.
+- **🏆 Leaderboard**: Track active member participation, contributions, and coding achievements.
+- **👥 Member Directory**: Connect with club members, developers, and alumni.
+- **📊 Member Dashboard**: A personalized portal for club members to manage their projects and profiles.
 
 ---
 
-### 1. Cloud Firestore Rules (`firestore.rules`)
+## 🛠️ Tech Stack
 
-Paste the contents of [firestore.rules](./firestore.rules) into **Firebase Console → Firestore Database → Rules**.
-
-#### Collection Security Logic Summary
-
-| Collection | Read | Create | Update | Delete | Notes |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `events` | Public | Admin claim | Admin claim | Admin claim | Admin-managed events listing |
-| `projects` | Public | Any auth user | Admin **or** own submission (`submittedByUid`) | Admin **or** own | Members submit projects from `/projects` page |
-| `blogs` | Approved / Admin | Anyone (`status: pending`) or Admin | Admin only | Admin only | Public only sees `status == 'approved'`; `/blog/[slug]` gates pending posts |
-| `members` | Admin + self | Admin only | Admin **or** self (restricted fields) | Admin only | Full private profile; no status/uid/email self-edit |
-| `memberProfiles` | Public | Admin only | Admin **or** self (by doc ID match) | Admin only | Public-safe profile subset, synced on approval |
-| `leaderboard` | Public | Admin claim | Admin claim | Admin claim | Points managed by admin |
-| `contacts` | Admin claim | Public (validated) | Admin claim | Admin claim | Contact form submissions |
+- **Framework**: [Next.js](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **UI & Styling**: [Tailwind CSS](https://tailwindcss.com/), [Framer Motion](https://www.framer.com/motion/)
+- **Icons & Effects**: [React Icons](https://react-icons.github.io/react-icons/), [tsParticles](https://particles.js.org/)
+- **Backend & Services**: Firebase
 
 ---
 
-### 2. Member & Blog Lifecycles
+## 🚀 Getting Started
 
-#### Member Lifecycle
-```
-Admin creates member doc in /members (status: "pending")
-        ↓
-Admin clicks Approve in dashboard
-        ↓
-POST /api/admin/approve-member (verified admin ID token)
-        ↓
-Firebase Auth account created (email + password from /members doc)
-        ↓
-/members/{id}.status = "approved", .uid = newUser.uid, .password = null
-        ↓
-/memberProfiles/{id} = { name, image, bio, github, linkedin }  ← public
-        ↓
-Member logs in at /member/login → routed to /member/dashboard
-```
+Follow these steps to run DevNest locally on your machine.
 
-#### Blog Verification Lifecycle
-```
-User / Member writes an article on /blog ("Write Article")
-        ↓
-Document saved in /blogs with status = "pending"
-        ↓
-Article is hidden from public /blog listing and /blog/[slug]
-        ↓
-Admin reviews submission in Admin Dashboard under "Blog Posts" tab
-        ↓
-Admin clicks 1-Click Approve (or edits & approves)
-        ↓
-/blogs/{id}.status = "approved"
-        ↓
-Article immediately appears on /blog and becomes accessible at /blog/[slug]
-```
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v18.0.0 or higher recommended)
+- `npm`, `yarn`, or `pnpm`
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/nielit-coding-club/devnest.ropar.git
+   cd devnest.ropar
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**
+   
+   Create a `.env.local` file in the root directory and add your application configuration credentials.
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open in browser**
+   
+   Visit [http://localhost:3000](http://localhost:3000) to view the application.
 
 ---
 
-### 3. Firebase Storage Rules (`storage.rules`)
+## 📁 Project Structure
 
-```javascript
-rules_version = '2';
-
-service firebase.storage {
-  match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-  }
-}
+```
+├── app/                  # Next.js App Router (pages and layouts)
+│   ├── about/            # About club page
+│   ├── blog/             # Technical blogs and articles
+│   ├── contact/          # Contact page
+│   ├── events/           # Events and workshops
+│   ├── leaderboard/      # Club leaderboard
+│   ├── member/           # Member login and dashboard
+│   ├── people/           # Member profiles directory
+│   └── projects/         # Member projects showcase
+├── components/           # Reusable UI components
+├── lib/                  # Shared helper functions and service clients
+├── public/               # Static assets, images, and logos
+└── scripts/              # Project maintenance utilities
 ```
 
 ---
 
-## 🔑 Required Environment Variables
+## 🤝 Contributing
 
-### Public (client-side) — `.env.local`
-```env
-NEXT_PUBLIC_FIREBASE_API_KEY=
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
-NEXT_PUBLIC_FIREBASE_APP_ID=
-```
+Contributions from club members and the developer community are warmly welcome!
 
-### Server-side (Admin SDK) — `.env.local`
-```env
-FIREBASE_ADMIN_PROJECT_ID=
-FIREBASE_ADMIN_CLIENT_EMAIL=
-FIREBASE_ADMIN_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-```
+1. **Fork the repository**
+2. **Create a new branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'Add some amazing feature'`)
+4. **Push to the branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
+
+Please ensure your code follows the project's linting and formatting guidelines before opening a pull request.
 
 ---
 
-## 🗂️ Firestore Indexes Required
+## 📄 License
 
-The following composite indexes must be created in Firebase Console → Firestore → Indexes:
-
-| Collection | Fields | Query Type |
-| :--- | :--- | :--- |
-| `blogs` | `status ASC`, `date DESC` | Composite |
-| `events` | `status ASC`, `date ASC` | Composite |
-| `projects` | `submittedByUid ASC`, `updatedAt DESC` | Composite |
-
----
-
-## 🚀 How to Apply Security Rules
-
-### Option A: Firebase Console
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. **Firestore**: Build → Firestore Database → Rules → paste → Publish
-3. **Storage**: Build → Storage → Rules → paste → Publish
-
-### Option B: Firebase CLI
-```bash
-npx firebase-tools deploy --only firestore:rules
-npx firebase-tools deploy --only storage
-```
-
----
-
-## 💻 Local Development
-
-```bash
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
----
-
-## 🏛️ Architecture Overview
-
-```
-/app
-  /page.tsx              → Home: stats, featured events & projects
-  /events                → Public events listing
-  /projects              → Public projects; auth-gated submit
-  /blog                  → Public blog (approved only)
-  /blog/[slug]           → Blog detail
-  /leaderboard           → Public leaderboard
-  /members               → Public member listing (legacy)
-  /people                → Public member profiles (from /memberProfiles)
-  /contact               → Public contact form
-  /about                 → About the club
-  /member/login          → Member login page
-  /member/dashboard      → Protected member dashboard (auth required)
-  /admin                 → Admin login (Firebase Auth)
-  /admin/dashboard       → Admin CRUD panel
-  /api/admin/approve-member → Server route: creates auth account + publishes profile
-
-/components              → Shared UI: Navbar, Footer, Cards, Modal, Skeleton...
-/lib
-  firebase.ts            → Client SDK init
-  firebaseAdmin.ts       → Admin SDK init (server-side only)
-  services.ts            → Firestore CRUD helpers
-```
+This project is maintained by the **NIELIT Coding Club**.
